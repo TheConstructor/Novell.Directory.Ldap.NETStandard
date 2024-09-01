@@ -28,6 +28,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Security;
+using System.Runtime.ExceptionServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
@@ -2394,10 +2395,10 @@ namespace Novell.Directory.Ldap
                         };
                         var url = new LdapUrl(referrals[i]);
                         await rconn.ConnectAsync(url.Host, url.Port).ConfigureAwait(false);
-                        if (rh is ILdapAuthHandler)
+                        if (rh is ILdapAuthHandler handler)
                         {
                             // Get application supplied dn and pw
-                            var ap = ((ILdapAuthHandler)rh).GetAuthProvider(url.Host, url.Port);
+                            var ap = handler.GetAuthProvider(url.Host, url.Port);
                             dn = ap.Dn;
                             pw = ap.Password;
                         }
@@ -2477,14 +2478,15 @@ namespace Novell.Directory.Ldap
             {
                 // Could not connect to any server, throw an exception
                 LdapException ldapex;
-                if (ex is LdapReferralException)
+                if (ex is LdapReferralException exception)
                 {
-                    throw (LdapReferralException)ex;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
+                    throw exception;
                 }
 
-                if (ex is LdapException)
+                if (ex is LdapException ldapException)
                 {
-                    ldapex = (LdapException)ex;
+                    ldapex = ldapException;
                 }
                 else
                 {
@@ -2658,7 +2660,8 @@ namespace Novell.Directory.Ldap
                         agent = queue.MessageAgent;
                     }
 
-                    await agent.SendMessageAsync(rconn.Connection, newMsg, _defSearchCons.TimeLimit, null).ConfigureAwait(false);
+                    await agent.SendMessageAsync(rconn.Connection, newMsg, _defSearchCons.TimeLimit, null)
+                        .ConfigureAwait(false);
                 }
                 catch (InterThreadException ex)
                 {
@@ -2677,7 +2680,8 @@ namespace Novell.Directory.Ldap
                     // the stack unwinds back to the original and returns
                     // to the application.
                     // An exception is thrown for an error
-                    connList = await ChaseReferralAsync(queue, cons, null, null, hopCount, false, connList).ConfigureAwait(false);
+                    connList = await ChaseReferralAsync(queue, cons, null, null, hopCount, false, connList)
+                        .ConfigureAwait(false);
                 }
                 else
                 {
@@ -2685,13 +2689,12 @@ namespace Novell.Directory.Ldap
                     return connList;
                 }
             }
+            catch (LdapReferralException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
-                if (ex is LdapReferralException)
-                {
-                    throw (LdapReferralException)ex;
-                }
-
                 // Set referral list and failed referral
                 var rex = new LdapReferralException(ExceptionMessages.ReferralError, ex);
                 rex.SetReferrals(refs);

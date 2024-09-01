@@ -520,7 +520,7 @@ namespace Novell.Directory.Ldap
             }
 
             var c = key[0];
-            if (c >= '0' && c <= '9')
+            if (c is >= '0' and <= '9')
             {
                 // oid lookup
                 return idTable[key];
