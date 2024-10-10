@@ -468,7 +468,7 @@ namespace Novell.Directory.Ldap
                 throw new ArgumentException("Attribute value cannot be null");
             }
 
-            Add(Base64.Decode(attrString));
+            Add(Convert.FromBase64String(attrString));
         }
 
         /// <summary>
@@ -493,7 +493,10 @@ namespace Novell.Directory.Ldap
                 throw new ArgumentException("Attribute value cannot be null");
             }
 
-            Add(Base64.Decode(attrString, start, end));
+            var length = end - start + 1;
+            var chars = new char[length];
+            attrString.CopyTo(start, chars, 0, length);
+            Add(Convert.FromBase64CharArray(chars, 0, length));
         }
 
         /// <summary>
@@ -513,7 +516,7 @@ namespace Novell.Directory.Ldap
                 throw new ArgumentException("Attribute value cannot be null");
             }
 
-            Add(Base64.Decode(attrChars));
+            Add(Convert.FromBase64CharArray(attrChars, 0, attrChars.Length));
         }
 
         /// <summary>

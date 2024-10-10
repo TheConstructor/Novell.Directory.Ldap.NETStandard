@@ -1054,7 +1054,7 @@ namespace Novell.Directory.Ldap.Rfc2251
         /// </summary>
         private static string ByteString(byte[] value)
         {
-            if (Base64.IsValidUtf8(value, true))
+            if (Utf8Helper.IsValidUtf8(value, true))
             {
                 return value.ToUtf8String();
             }
